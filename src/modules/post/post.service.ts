@@ -17,6 +17,7 @@ import { v4 as uuid } from "uuid";
 import { LikePostQueryInputsDto } from "./post.dto";
 import { Types, UpdateQuery } from "mongoose";
 import { StorageEnum } from "../../utils/multer/cloud.multer";
+import { connectedSockets, getIo } from "../gateway";
 
 export const postAvailability = (req: Request) => {
   return [
@@ -186,6 +187,13 @@ class PostService {
     if (!post) {
       throw new NotfoundException("invalid postId or post not exist");
     }
+
+    if (action !== LikeActionEnum.unlike) {
+      getIo()
+        .to(connectedSockets.get(post.createdBy.toString()) as string[])
+        .emit("likePost", { postId, userId: req.user?._id });
+    }
+
     return successResponse({ res });
   };
 

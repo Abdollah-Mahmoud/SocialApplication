@@ -13,8 +13,11 @@ import {
   StorageEnum,
 } from "../../utils/multer/cloud.multer";
 import { endpoint } from "./user.authorization";
+import { chatRouter } from "../chat";
 
 const router = Router();
+
+router.use("/:userId/chat", chatRouter);
 
 router.get("/", authentication(), userService.profile);
 router.get(

@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 config({ path: resolve("./config/.env.development") });
 
+import path from "path";
+
 // load express and its types
 import type { Request, Response, Express } from "express";
 import express from "express";
@@ -12,7 +14,7 @@ import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 
-import { authRouter, userRouter, postRouter } from "./modules";
+import { authRouter, userRouter, postRouter, initializeIo } from "./modules";
 
 import {
   BadRequestException,
@@ -22,6 +24,7 @@ import connectDB from "./db/db.connection";
 import { createGetPreSignedLink, getFile } from "./utils/multer/s3.config";
 import { promisify } from "node:util";
 import { pipeline } from "node:stream";
+import { chatRouter } from "./modules/chat";
 const createS3WriteStreamPipe = promisify(pipeline);
 
 // handles api ratelimit on api requests
@@ -43,6 +46,9 @@ const bootstrap = async (): Promise<void> => {
   app.use(helmet());
   app.use(limiter);
 
+  // Serve node_modules for FE
+  app.use("/static", express.static(path.join(__dirname, "node_modules")));
+
   // app routing
   app.get("/", (req: Request, res: Response) => {
     res.json({
@@ -54,7 +60,7 @@ const bootstrap = async (): Promise<void> => {
   app.use("/auth", authRouter);
   app.use("/user", userRouter);
   app.use("/post", postRouter);
-
+  app.use("/chat", chatRouter);
 
   // get assets
   app.get(
@@ -95,6 +101,8 @@ const bootstrap = async (): Promise<void> => {
         throw new BadRequestException("failed to fetch asset");
       }
 
+      res.set("Cross-Origin-Resource-Policy", "cross-origin");
+
       res.setHeader(
         "Content-type",
         `${s3Response.ContentType || "application/octet-stream"}`
@@ -124,12 +132,11 @@ const bootstrap = async (): Promise<void> => {
   // db
   await connectDB();
 
-  // hooks
-
   // start server
-  app.listen(port, () => {
+  const httpServer = app.listen(port, () => {
     console.log(`server is running on port ====== ${port}`);
   });
+  initializeIo(httpServer);
 };
 
 export default bootstrap;

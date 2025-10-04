@@ -1,3 +1,4 @@
+import { ChatModel } from "./../../db/model/chat.model";
 import { FriendRequestModel } from "./../../db/model/friendRequest.model";
 import { PostModel } from "./../../db/model/Post.model";
 import { Request, Response } from "express";
@@ -38,10 +39,13 @@ import { s3Event } from "../../utils/multer/s3.events";
 import { successResponse } from "../../utils/response/success.response";
 import { IProfileImageResponse, IUserResponse } from "./user.entities";
 import { friendRequestRepository, PostRepository } from "../../db/repository";
+import { ChatRepository } from "../../db/repository/chat.repository";
 
 class UserService {
-  private userModel = new UserRepository(UserModel);
-  private postModel = new PostRepository(PostModel);
+  private userModel: UserRepository = new UserRepository(UserModel);
+  private postModel: PostRepository = new PostRepository(PostModel);
+  private chatModel: ChatRepository = new ChatRepository(ChatModel);
+
   private friendRequestModel = new friendRequestRepository(FriendRequestModel);
 
   constructor() {}
@@ -123,10 +127,16 @@ class UserService {
     if (!profile) {
       throw new NotfoundException("fail to find user profile");
     }
+    const groups = await this.chatModel.find({
+      filter: {
+        participants: { $in: req.user?._id as Types.ObjectId },
+        group: { $exists: true },
+      },
+    });
 
     return successResponse<IUserResponse>({
       res,
-      data: { user: profile },
+      data: { user: profile, groups },
     });
   };
 
@@ -179,7 +189,7 @@ class UserService {
       },
     });
     if (checkFriendRequestExist) {
-      throw new ConflictException("Friend request already exist");
+      throw new ConflictException("Friend request already exists");
     }
 
     const user = await this.userModel.findOne({ filter: { _id: userId } });
@@ -201,7 +211,7 @@ class UserService {
     }
     return successResponse({
       res,
-      statusCode: 200,
+      statusCode: 20,
     });
   };
 
