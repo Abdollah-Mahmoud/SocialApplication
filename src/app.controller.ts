@@ -14,7 +14,13 @@ import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 
-import { authRouter, userRouter, postRouter, initializeIo } from "./modules";
+import {
+  authRouter,
+  userRouter,
+  postRouter,
+  initializeIo,
+  schema,
+} from "./modules";
 
 import {
   BadRequestException,
@@ -26,6 +32,8 @@ import { promisify } from "node:util";
 import { pipeline } from "node:stream";
 import { chatRouter } from "./modules/chat";
 const createS3WriteStreamPipe = promisify(pipeline);
+import { createHandler } from "graphql-http/lib/use/express";
+import { authentication } from "./middleware/authentication.middleware";
 
 // handles api ratelimit on api requests
 const limiter = rateLimit({
@@ -45,6 +53,15 @@ const bootstrap = async (): Promise<void> => {
   app.use(express.json());
   app.use(helmet());
   app.use(limiter);
+
+  app.all(
+    "/graphql",
+    authentication(),
+    createHandler({
+      schema: schema,
+      context: (req) => ({ user: req.raw.user }),
+    })
+  );
 
   // Serve node_modules for FE
   app.use("/static", express.static(path.join(__dirname, "node_modules")));

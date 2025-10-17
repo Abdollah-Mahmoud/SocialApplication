@@ -6,7 +6,7 @@ import {
   HPostDocument,
   PostModel,
 } from "../../db/model/Post.model";
-import { UserModel } from "../../db/model/User.model";
+import { HUserDocument, UserModel } from "../../db/model/User.model";
 import {
   PostRepository,
   UserRepository,
@@ -33,7 +33,7 @@ class CommentService {
       filter: {
         _id: postId,
         allowComments: AllowCommentsEnum.allow,
-        $or: postAvailability(req),
+        $or: postAvailability(req.user as HUserDocument),
       },
     });
 
@@ -98,7 +98,7 @@ class CommentService {
             path: "postId",
             match: {
               allowComments: AllowCommentsEnum.allow,
-              $or: postAvailability(req),
+              $or: postAvailability(req.user as HUserDocument),
             },
           },
         ],

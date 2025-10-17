@@ -10,8 +10,8 @@ import {
 } from "./user.dto";
 import { UserRepository } from "../../db/repository/user.repository";
 import {
+  genderEnum,
   HUserDocument,
-  IUser,
   roleEnum,
   UserModel,
 } from "../../db/model/User.model";
@@ -40,8 +40,52 @@ import { successResponse } from "../../utils/response/success.response";
 import { IProfileImageResponse, IUserResponse } from "./user.entities";
 import { friendRequestRepository, PostRepository } from "../../db/repository";
 import { ChatRepository } from "../../db/repository/chat.repository";
+import { GraphQLError } from "graphql";
 
-class UserService {
+export interface IUser {
+  id: number;
+  name: string;
+  email: string;
+  gender: genderEnum;
+  password: string;
+  followers: number[];
+}
+let users: IUser[] = [
+  {
+    id: 1,
+    name: "mahmoud",
+    email: "ad@ab@gmail.com",
+    gender: genderEnum.male,
+    password: "288282",
+    followers: [],
+  },
+  {
+    id: 1,
+    name: "asasas",
+    email: "ab@gmail.com",
+    gender: genderEnum.female,
+    password: "323232",
+    followers: [],
+  },
+  {
+    id: 1,
+    name: "fdfdfd",
+    email: "b@gmail.com",
+    gender: genderEnum.male,
+    password: "545454",
+    followers: [],
+  },
+  {
+    id: 1,
+    name: "hghghg",
+    email: "a@gmail.com",
+    gender: genderEnum.male,
+    password: "989898",
+    followers: [],
+  },
+];
+
+export class UserService {
   private userModel: UserRepository = new UserRepository(UserModel);
   private postModel: PostRepository = new PostRepository(PostModel);
   private chatModel: ChatRepository = new ChatRepository(ChatModel);
@@ -444,6 +488,43 @@ class UserService {
       res,
       message: "Unfriended successfully",
     });
+  };
+
+  // graphql =============================================
+  welcome = (user: HUserDocument): string => {
+    console.log({ s: user });
+    return "Hello graphql";
+  };
+
+  allUsers = async (
+    args: { gender: genderEnum },
+    authUser: HUserDocument
+  ): Promise<HUserDocument[]> => {
+    return await this.userModel.find({
+      filter: { _id: { $ne: authUser._id }, gender: args.gender },
+    });
+  };
+
+  search = (args: {
+    email: string;
+  }): { message: string; statusCode: number; data: IUser } => {
+    const user = users.find((ele) => ele.email === args.email);
+    if (!user) {
+      throw new GraphQLError("failed to find matching result", {
+        extensions: { statusCode: 404 },
+      });
+    }
+    return { message: "Done", statusCode: 200, data: user };
+  };
+
+  addFollower = (args: { friendId: number; myId: number }): IUser[] => {
+    users = users.map((ele: IUser): IUser => {
+      if (ele.id === args.friendId) {
+        ele.followers.push(args.myId);
+      }
+      return ele;
+    });
+    return users;
   };
 }
 
